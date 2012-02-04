@@ -8,7 +8,10 @@
 #include <iostream>
 #include <fstream>
 #include <unordered_map>
+#include <map>
 #include <vector>
+#include <list>
+#include <set>
 
 using namespace std;
 
@@ -24,12 +27,22 @@ typedef struct docTF {
 
 class IRSystem {
 public:
-  int readWord(FILE *file, char *buffer, int pos, char *word);
+  int  readWord(FILE* file, char* word);
   void readIndex(string path);
+  void readDocLengths(string path);
+  void checkIndex();
+  void answerQuery(list<term> query);
 protected:
+  int pos;
   int read;
-  unordered_map<term, int>   dfIndex;
+  char buffer[BUFFER_SIZE];
+  unordered_map<term, int>           dfIndex;
   unordered_map<term, vector<docTF>> tfIndex;
+  unordered_map<document, double>    docLen;
+  unordered_map<document, double>    docScore;
+  multimap<double, document>         ranking;  // c++ keeps maps sortet wrt. their keys
+  
+  void increasePos(FILE* file);
 };
 
 #endif /* IR_PRAC_1 */
