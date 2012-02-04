@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 #ifndef IR_PRAC_1
 #define IR_PRAC_1
+=======
+#ifndef PR_PRAC_1
+#define PR_PRAC_1
+>>>>>>> origin
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,8 +19,14 @@ using namespace std;
 
 typedef string document;
 typedef string term;
+<<<<<<< HEAD
 
 const int BUFFER_SIZE = 1024;
+=======
+// typedef  dtfVector;
+
+const int BUFFER_SIZE = 1024;   // the index file has long lines
+>>>>>>> origin
 
 typedef struct docTF {
   document *doc;
@@ -32,4 +43,8 @@ protected:
   unordered_map<term, vector<docTF>> tfIndex;
 };
 
+<<<<<<< HEAD
 #endif /* IR_PRAC_1 */
+=======
+#endif /* PR_PRAC_1 */
+>>>>>>> origin
