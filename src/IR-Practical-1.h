@@ -30,17 +30,25 @@ public:
   int  readWord(FILE* file, char* word);
   void readIndex(string path);
   void readDocLengths(string path);
+  void readRelevantDocuments(string path);
   void checkIndex();
+  void printRankedList();
   void answerQuery(list<term> query);
+  void evaluate(bool print);
+  void clearQuery();
 protected:
   int pos;
   int read;
   char buffer[BUFFER_SIZE];
-  unordered_map<term, int>           dfIndex;
-  unordered_map<term, vector<docTF>> tfIndex;
-  unordered_map<document, double>    docLen;
-  unordered_map<document, double>    docScore;
-  multimap<double, document>         ranking;  // c++ keeps maps sortet wrt. their keys
+  unordered_map< term, int >             dfIndex;
+  unordered_map< term, vector< docTF > > tfIndex;
+  unordered_map< document, double >      docLen;
+  set< document >                        relevantDocs;
+  
+  unordered_map< document, double >      docScore;
+  set< document >                        seenDocs;
+  multimap< double, document >           ranking;  // c++ keeps maps sortet wrt. their keys
+  map < double, double >                 recallOnPrecision;
   
   void increasePos(FILE* file);
 };

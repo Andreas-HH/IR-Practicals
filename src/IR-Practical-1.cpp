@@ -1,5 +1,6 @@
 #include "IR-Practical-1.h" 
 
+
 void IRSystem::increasePos(FILE* file) {
   if (pos < read) {
     pos++;
@@ -9,7 +10,6 @@ void IRSystem::increasePos(FILE* file) {
     }
   }
 }
-
 
 int IRSystem::readWord(FILE *file, char *word) {
   int j = 0;
@@ -23,7 +23,6 @@ int IRSystem::readWord(FILE *file, char *word) {
     
   return 0;
 }
-
 
 void IRSystem::readIndex(string path) {
   int i;
@@ -74,16 +73,27 @@ void IRSystem::readDocLengths(string path) {
   read = fread(buffer, sizeof(char), BUFFER_SIZE, lenf);
   while (pos != read) {
     readWord(lenf, word);
-//     printf("Document %s ", word);
     currentDoc = string(word);
     readWord(lenf, word);
     stod << word;
     stod >> len;
     stod.clear();
-//     printf("has length %g \n", len);
     docLen[currentDoc] = len;
   }
   fclose(lenf);
+}
+
+void IRSystem::readRelevantDocuments(string path) {
+  char word[64];
+  FILE *relf = fopen(path.c_str(), "r");
+  
+  pos = 0;  // no blank symbol in this file
+  read = fread(buffer, sizeof(char), BUFFER_SIZE, relf);
+  while (pos != read) {
+    readWord(relf, word);
+    relevantDocs.insert(string(word));
+  }
+  fclose(relf);
 }
 
 
@@ -120,11 +130,9 @@ void IRSystem::answerQuery(list<term> query) {
   double currentIDF;
   document currentDoc;
   vector<docTF> vDTF;
-  set<document> seenDocs;
   list<term>::iterator qiter;
   vector<docTF>::iterator viter;
   set<document>::iterator siter;
-  multimap<double, document>::reverse_iterator riter;
   
   for (qiter = query.begin(); qiter != query.end(); qiter++) {
     df = dfIndex[*qiter];
@@ -134,55 +142,122 @@ void IRSystem::answerQuery(list<term> query) {
       for (viter = vDTF.begin(); viter != vDTF.end(); viter++) {
 	currentDoc = *(viter->doc);
         seenDocs.insert(currentDoc);
-// 	if (currentDoc == "XIE19981228.0221")
-// 	  printf("hans: %i, %g, %g \n", viter->tf, currentIDF, docLen[currentDoc]);
 	docScore[currentDoc] += ((double)viter->tf)*currentIDF/docLen[currentDoc];
       }
     } else {
       currentIDF = 0.;   // ignore terms that aren't indexed
     }
-    
-    printf("%g \n", currentIDF);
   }
   
   for (siter = seenDocs.begin(); siter != seenDocs.end(); siter++) {
     currentDoc = *siter;
     ranking.insert(pair<double,document>(docScore[currentDoc], currentDoc));
   }
+}
+
+void IRSystem::evaluate(bool print) {
+  int num = 0;
+  int foundDocs = 0;
+  double numRel = (double) relevantDocs.size();
+  double precision, recall;
+  double average = 0;
+  double numRecall;
+  multimap< double, document >::reverse_iterator riter;
+  map< double, double >::iterator rpiter;
+  
+  if (print) printf("Recall --> Precision \n");
+  for (riter = ranking.rbegin(); riter != ranking.rend(); riter++) {
+    num++;
+    if (relevantDocs.find(riter->second) != relevantDocs.end()) { // contained
+      foundDocs++;
+      precision = ((double) foundDocs)/((double) num);
+      recall = ((double) foundDocs)/numRel;
+      recallOnPrecision[recall] = precision;
+      if (print) printf("%g --> %g \n", recall, precision);
+    }
+  }
+  
+  // compute average
+  numRecall = (double) recallOnPrecision.size();
+  for (rpiter = recallOnPrecision.begin(); rpiter != recallOnPrecision.end(); rpiter++) {
+    average += (rpiter->second)/numRecall;
+  }
+  
+  printf("average: %g \n", average);
+}
+
+void IRSystem::printRankedList() {
+  int num = 0;
+  int foundDocs = 0;
+  double numRel = (double) relevantDocs.size();
+  double precision, recall;
+  multimap<double, document>::reverse_iterator riter;
   
   printf("ranked list of candidates (%i): \n", seenDocs.size());
+  printf("name [score] [Precision] [Recall] \n");
   for (riter = ranking.rbegin(); riter != ranking.rend(); riter++) {
-    printf("%s [%g] \n", riter->second.c_str(), riter->first);
+    num++;
+    if (relevantDocs.find(riter->second) != relevantDocs.end()) { // contained
+      foundDocs++;
+    }
+    precision = ((double) foundDocs)/((double) num);
+    recall = ((double) foundDocs)/numRel;
+    printf("%s \t [%g] \t [%g] \t [%g] \n", riter->second.c_str(), riter->first, precision, recall);
   }
+}
+
+void IRSystem::clearQuery() {
+  docScore.clear();
+  seenDocs.clear();
+  ranking.clear();
+  recallOnPrecision.clear();
+  printf("\n\n");
 }
 
 
 int main(int argc, const char** argv) {
   int i;
-  list<term> query;
+  list<term> query1;
+  list<term> query2;
   IRSystem *irs = new IRSystem();
   
-//   printf("%i, \'%s\' \n", argc, argv[0]);
   if (argc == 1) {
-    query.push_back("financial");
-    query.push_back("instruments");
-    query.push_back("being");
-    query.push_back("traded");
-    query.push_back("on");
-    query.push_back("the");
-    query.push_back("American");
-    query.push_back("stock");
-    query.push_back("exchange");
+    query1.push_back("financial");
+    query1.push_back("instruments");
+    query1.push_back("being");
+    query1.push_back("traded");
+    query1.push_back("on");
+    query1.push_back("the");
+    query1.push_back("American");
+    query1.push_back("stock");
+    query1.push_back("exchange");
+    
+    query2.push_back("stocks");
+    query2.push_back("shares");
+    query2.push_back("stock");
+    query2.push_back("market");
+    query2.push_back("exchange");
+    query2.push_back("New");
+    query2.push_back("York");
+    query2.push_back("traded");
+    query2.push_back("trading");
   } else {
     for (i = 1; i < argc; i++) {
-      query.push_back(string(argv[i]));
+      query1.push_back(string(argv[i]));
     }
   }
   
   irs->readIndex("data/index.txt");
   irs->readDocLengths("data/doc_lengths.txt");
+  irs->readRelevantDocuments("data/relevant.txt");
 //   irs->checkIndex();
-  irs->answerQuery(query);
+  printf("Query 1: ");
+  irs->answerQuery(query1);
+  irs->evaluate(false);
+  irs->clearQuery();
+  printf("Query 2: ");
+  irs->answerQuery(query2);
+  irs->evaluate(false);
 
   return 0;
 }
