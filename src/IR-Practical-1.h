@@ -33,13 +33,16 @@ public:
   void readRelevantDocuments(string path);
   void checkIndex();
   void printRankedList();
-  void answerQuery(list<term> query);
+  void answerQuery(list<term> query, bool normalise);
+  void answerQuery(bool normalise);
   void evaluate(bool print);
+  void addKeyWord(term word);
   void clearQuery();
 protected:
   int pos;
   int read;
   char buffer[BUFFER_SIZE];
+  list<term>                             query;
   unordered_map< term, int >             dfIndex;
   unordered_map< term, vector< docTF > > tfIndex;
   unordered_map< document, double >      docLen;
@@ -49,6 +52,7 @@ protected:
   set< document >                        seenDocs;
   multimap< double, document >           ranking;  // c++ keeps maps sortet wrt. their keys
   map < double, double >                 recallOnPrecision;
+  map < double, double >                 niceROP;
   
   void increasePos(FILE* file);
 };

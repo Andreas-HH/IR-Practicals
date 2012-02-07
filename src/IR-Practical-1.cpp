@@ -124,7 +124,11 @@ void IRSystem::checkIndex() {
   }
 }
 
-void IRSystem::answerQuery(list<term> query) {
+void IRSystem::answerQuery(bool normalise) {
+  answerQuery(query, normalise);
+}
+
+void IRSystem::answerQuery(list<term> query, bool normalise) {
   int df;
   double currentLen;
   double currentIDF;
@@ -142,7 +146,10 @@ void IRSystem::answerQuery(list<term> query) {
       for (viter = vDTF.begin(); viter != vDTF.end(); viter++) {
 	currentDoc = *(viter->doc);
         seenDocs.insert(currentDoc);
-	docScore[currentDoc] += ((double)viter->tf)*currentIDF/docLen[currentDoc];
+	if (normalise)
+	  docScore[currentDoc] += ((double)viter->tf)*currentIDF/docLen[currentDoc];
+	else
+	  docScore[currentDoc] += ((double)viter->tf)*currentIDF;
       }
     } else {
       currentIDF = 0.;   // ignore terms that aren't indexed
@@ -158,6 +165,9 @@ void IRSystem::answerQuery(list<term> query) {
 void IRSystem::evaluate(bool print) {
   int num = 0;
   int foundDocs = 0;
+  double threshold = 0.1;
+  double lastRecall = 0.;
+  double dp, dr;
   double numRel = (double) relevantDocs.size();
   double precision, recall;
   double average = 0;
@@ -173,14 +183,23 @@ void IRSystem::evaluate(bool print) {
       precision = ((double) foundDocs)/((double) num);
       recall = ((double) foundDocs)/numRel;
       recallOnPrecision[recall] = precision;
-      if (print) printf("%g --> %g \n", recall, precision);
+      if (recall >= threshold) {
+// 	printf("%g \n", recall);
+	dp = precision - recallOnPrecision[lastRecall];
+	dr = recall - lastRecall;  // should be constant actually
+	niceROP[threshold] = recallOnPrecision[lastRecall] + (threshold - lastRecall) * (dp/dr);
+	if (print) printf("%g --> %g \n", threshold, niceROP[threshold]);
+	threshold += 0.1;
+      }
+      lastRecall = recall;
+//       if (print) printf("%g --> %g \n", recall, precision);
     }
   }
   
   // compute average
   numRecall = (double) recallOnPrecision.size();
-  for (rpiter = recallOnPrecision.begin(); rpiter != recallOnPrecision.end(); rpiter++) {
-    average += (rpiter->second)/numRecall;
+  for (rpiter = niceROP.begin(); rpiter != niceROP.end(); rpiter++) { // recallOnPrecision
+    average += (rpiter->second)/niceROP.size();
   }
   
   printf("average: %g \n", average);
@@ -207,6 +226,7 @@ void IRSystem::printRankedList() {
 }
 
 void IRSystem::clearQuery() {
+  query.clear();
   docScore.clear();
   seenDocs.clear();
   ranking.clear();
@@ -214,6 +234,27 @@ void IRSystem::clearQuery() {
   printf("\n\n");
 }
 
+void IRSystem::addKeyWord(term word) {
+  int i;
+  char altWord[word.size()];
+  const char *input = word.c_str();
+  
+  altWord[0] = toupper(input[0]);
+  for (i = 1; input[i] != '\0'; i++) {
+    altWord[i] = input[i];
+  }
+  altWord[i] = '\0';
+//   printf("Adding as well: \'%s\' \n", altWord);
+//   query.push_back(string(altWord));
+  for (i = 0; input[i] != '\0'; i++) {
+    altWord[i] = toupper(input[i]);
+  }
+  altWord[i] = '\0';
+//   printf("Adding as well: \'%s\' \n", altWord);
+//   query.push_back(string(altWord));
+  
+  query.push_back(word);
+}
 
 int main(int argc, const char** argv) {
   int i;
@@ -252,12 +293,31 @@ int main(int argc, const char** argv) {
   irs->readRelevantDocuments("data/relevant.txt");
 //   irs->checkIndex();
   printf("Query 1: ");
-  irs->answerQuery(query1);
-  irs->evaluate(false);
+  irs->addKeyWord("financial");
+  irs->addKeyWord("instruments");
+  irs->addKeyWord("being");
+  irs->addKeyWord("traded");
+  irs->addKeyWord("on");
+  irs->addKeyWord("the");
+  irs->addKeyWord("American");
+  irs->addKeyWord("stock");
+  irs->addKeyWord("exchange");
+  irs->answerQuery(false);
+  irs->evaluate(true);
   irs->clearQuery();
+  
   printf("Query 2: ");
-  irs->answerQuery(query2);
-  irs->evaluate(false);
+  irs->addKeyWord("stocks");
+  irs->addKeyWord("shares");
+  irs->addKeyWord("stock");
+  irs->addKeyWord("market");
+  irs->addKeyWord("exchange");
+  irs->addKeyWord("New");
+  irs->addKeyWord("York");
+  irs->addKeyWord("traded");
+  irs->addKeyWord("trading");
+  irs->answerQuery(false);
+  irs->evaluate(true);
 
   return 0;
 }
