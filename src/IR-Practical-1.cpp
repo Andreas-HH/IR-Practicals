@@ -97,32 +97,32 @@ void IRSystem::readRelevantDocuments(string path) {
 }
 
 
-void IRSystem::checkIndex() {
-  /*int i = dfIndex["alphabeta"];
-  vector<docTF> v = tfIndex["alphabeta"];
-//   docTF tf = v.at(0);
-  
-  printf("%i \n", i);
-  printf("v range: %i \n", v.size());
-//   if (v == NULL) printf("v = NULL \n");
-  printf("(%s, %i) \n", tfIndex["Maker"].at(4).doc->c_str(), tfIndex["Maker"].at(4).tf);*/
-  multimap<double, string> test;
-  multimap<double, string>::iterator miter;
-  
-//   test[0.1] = "a";
-//   test[0.5] = "e";
-//   test[0.7] = "g";
-//   test[0.2] = "b";
-  test.insert(pair<double,string>(0.1,"a"));
-  test.insert(pair<double,string>(0.5,"f"));
-  test.insert(pair<double,string>(0.5,"e"));
-  test.insert(pair<double,string>(0.7,"g"));
-  test.insert(pair<double,string>(0.2,"b"));
-  
-  for (miter = test.begin(); miter != test.end(); miter++) {
-    printf("%s \n", miter->second.c_str());
-  }
-}
+// void IRSystem::checkIndex() {
+//   /*int i = dfIndex["alphabeta"];
+//   vector<docTF> v = tfIndex["alphabeta"];
+// //   docTF tf = v.at(0);
+//   
+//   printf("%i \n", i);
+//   printf("v range: %i \n", v.size());
+// //   if (v == NULL) printf("v = NULL \n");
+//   printf("(%s, %i) \n", tfIndex["Maker"].at(4).doc->c_str(), tfIndex["Maker"].at(4).tf);*/
+//   multimap<double, string> test;
+//   multimap<double, string>::iterator miter;
+//   
+// //   test[0.1] = "a";
+// //   test[0.5] = "e";
+// //   test[0.7] = "g";
+// //   test[0.2] = "b";
+//   test.insert(pair<double,string>(0.1,"a"));
+//   test.insert(pair<double,string>(0.5,"f"));
+//   test.insert(pair<double,string>(0.5,"e"));
+//   test.insert(pair<double,string>(0.7,"g"));
+//   test.insert(pair<double,string>(0.2,"b"));
+//   
+//   for (miter = test.begin(); miter != test.end(); miter++) {
+//     printf("%s \n", miter->second.c_str());
+//   }
+// }
 
 void IRSystem::answerQuery(bool normalise) {
   answerQuery(query, normalise);
@@ -184,7 +184,6 @@ void IRSystem::evaluate(bool print) {
       recall = ((double) foundDocs)/numRel;
       recallOnPrecision[recall] = precision;
       if (recall >= threshold) {
-// 	printf("%g \n", recall);
 	dp = precision - recallOnPrecision[lastRecall];
 	dr = recall - lastRecall;  // should be constant actually
 	niceROP[threshold] = recallOnPrecision[lastRecall] + (threshold - lastRecall) * (dp/dr);
@@ -192,7 +191,6 @@ void IRSystem::evaluate(bool print) {
 	threshold += 0.1;
       }
       lastRecall = recall;
-//       if (print) printf("%g --> %g \n", recall, precision);
     }
   }
   
@@ -205,25 +203,25 @@ void IRSystem::evaluate(bool print) {
   printf("average: %g \n", average);
 }
 
-void IRSystem::printRankedList() {
-  int num = 0;
-  int foundDocs = 0;
-  double numRel = (double) relevantDocs.size();
-  double precision, recall;
-  multimap<double, document>::reverse_iterator riter;
-  
-  printf("ranked list of candidates (%i): \n", seenDocs.size());
-  printf("name [score] [Precision] [Recall] \n");
-  for (riter = ranking.rbegin(); riter != ranking.rend(); riter++) {
-    num++;
-    if (relevantDocs.find(riter->second) != relevantDocs.end()) { // contained
-      foundDocs++;
-    }
-    precision = ((double) foundDocs)/((double) num);
-    recall = ((double) foundDocs)/numRel;
-    printf("%s \t [%g] \t [%g] \t [%g] \n", riter->second.c_str(), riter->first, precision, recall);
-  }
-}
+// void IRSystem::printRankedList() {
+//   int num = 0;
+//   int foundDocs = 0;
+//   double numRel = (double) relevantDocs.size();
+//   double precision, recall;
+//   multimap<double, document>::reverse_iterator riter;
+//   
+//   printf("ranked list of candidates (%i): \n", seenDocs.size());
+//   printf("name [score] [Precision] [Recall] \n");
+//   for (riter = ranking.rbegin(); riter != ranking.rend(); riter++) {
+//     num++;
+//     if (relevantDocs.find(riter->second) != relevantDocs.end()) { // contained
+//       foundDocs++;
+//     }
+//     precision = ((double) foundDocs)/((double) num);
+//     recall = ((double) foundDocs)/numRel;
+//     printf("%s \t [%g] \t [%g] \t [%g] \n", riter->second.c_str(), riter->first, precision, recall);
+//   }
+// }
 
 void IRSystem::clearQuery() {
   query.clear();
@@ -262,31 +260,31 @@ int main(int argc, const char** argv) {
   list<term> query2;
   IRSystem *irs = new IRSystem();
   
-  if (argc == 1) {
-    query1.push_back("financial");
-    query1.push_back("instruments");
-    query1.push_back("being");
-    query1.push_back("traded");
-    query1.push_back("on");
-    query1.push_back("the");
-    query1.push_back("American");
-    query1.push_back("stock");
-    query1.push_back("exchange");
-    
-    query2.push_back("stocks");
-    query2.push_back("shares");
-    query2.push_back("stock");
-    query2.push_back("market");
-    query2.push_back("exchange");
-    query2.push_back("New");
-    query2.push_back("York");
-    query2.push_back("traded");
-    query2.push_back("trading");
-  } else {
-    for (i = 1; i < argc; i++) {
-      query1.push_back(string(argv[i]));
-    }
-  }
+//   if (argc == 1) {
+//     query1.push_back("financial");
+//     query1.push_back("instruments");
+//     query1.push_back("being");
+//     query1.push_back("traded");
+//     query1.push_back("on");
+//     query1.push_back("the");
+//     query1.push_back("American");
+//     query1.push_back("stock");
+//     query1.push_back("exchange");
+//     
+//     query2.push_back("stocks");
+//     query2.push_back("shares");
+//     query2.push_back("stock");
+//     query2.push_back("market");
+//     query2.push_back("exchange");
+//     query2.push_back("New");
+//     query2.push_back("York");
+//     query2.push_back("traded");
+//     query2.push_back("trading");
+//   } else {
+//     for (i = 1; i < argc; i++) {
+//       query1.push_back(string(argv[i]));
+//     }
+//   }
   
   irs->readIndex("data/index.txt");
   irs->readDocLengths("data/doc_lengths.txt");
