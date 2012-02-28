@@ -35,17 +35,20 @@ void IRSystem::readIndex(string path) {
   FILE *indexf = fopen(path.c_str(), "r");
   vector<docTF> freqVec;
   
-  pos = 1;
+  pos = 1; // there is a blank at the beginning of each line
   read = fread(buffer, sizeof(char), BUFFER_SIZE, indexf);
   while (pos != read) {
+    // reading term
     readWord(indexf, word);
     currentTerm = new string(word);
+    // reading document frequency
     readWord(indexf, word);
     stoi << word;
     stoi >> currentDF;
     stoi.clear();
     dfIndex[*currentTerm] = currentDF;
     freqVec = vector<docTF>(currentDF);
+    // reading term frequencies
     for (i = 0; i < currentDF; i++) {
       dtf = (docTF*) malloc(sizeof(docTF));
       readWord(indexf, word);
@@ -96,45 +99,17 @@ void IRSystem::readRelevantDocuments(string path) {
   fclose(relf);
 }
 
-
-// void IRSystem::checkIndex() {
-//   /*int i = dfIndex["alphabeta"];
-//   vector<docTF> v = tfIndex["alphabeta"];
-// //   docTF tf = v.at(0);
-//   
-//   printf("%i \n", i);
-//   printf("v range: %i \n", v.size());
-// //   if (v == NULL) printf("v = NULL \n");
-//   printf("(%s, %i) \n", tfIndex["Maker"].at(4).doc->c_str(), tfIndex["Maker"].at(4).tf);*/
-//   multimap<double, string> test;
-//   multimap<double, string>::iterator miter;
-//   
-// //   test[0.1] = "a";
-// //   test[0.5] = "e";
-// //   test[0.7] = "g";
-// //   test[0.2] = "b";
-//   test.insert(pair<double,string>(0.1,"a"));
-//   test.insert(pair<double,string>(0.5,"f"));
-//   test.insert(pair<double,string>(0.5,"e"));
-//   test.insert(pair<double,string>(0.7,"g"));
-//   test.insert(pair<double,string>(0.2,"b"));
-//   
-//   for (miter = test.begin(); miter != test.end(); miter++) {
-//     printf("%s \n", miter->second.c_str());
-//   }
-// }
-
 void IRSystem::answerQuery(bool normalise) {
   answerQuery(query, normalise);
 }
 
-void IRSystem::answerQuery(list<term> query, bool normalise) {
+void IRSystem::answerQuery(set<term> query, bool normalise) {
   int df;
   double currentLen;
   double currentIDF;
   document currentDoc;
   vector<docTF> vDTF;
-  list<term>::iterator qiter;
+  set<term>::iterator qiter;
   vector<docTF>::iterator viter;
   set<document>::iterator siter;
   
@@ -163,17 +138,17 @@ void IRSystem::answerQuery(list<term> query, bool normalise) {
 }
 
 void IRSystem::evaluate(bool print) {
-  int num = 0;
-  int foundDocs = 0;
-  double threshold = 0.1;
-  double lastRecall = 0.;
-  double dp, dr;
-  double numRel = (double) relevantDocs.size();
+  int num = 0; // number of seen documents
+  int foundDocs = 0; // number of seen relevant documents
+  double threshold = 0.1; // interval with to output recall->precision value
+  double lastRecall = 0.; // recall seen in the last iteration, used for interpolation
+  double dp, dr; // delta precision, recall
+  double numRel = (double) relevantDocs.size(); // number of relevant documents
   double precision, recall;
   double average = 0;
   double numRecall;
-  multimap< double, document >::reverse_iterator riter;
-  map< double, double >::iterator rpiter;
+  multimap< double, document >::reverse_iterator riter; // go from high to low score values
+  map< double, double >::iterator rpiter; // iterator through nice recall->precision table
   
   if (print) printf("Recall --> Precision \n");
   for (riter = ranking.rbegin(); riter != ranking.rend(); riter++) {
@@ -186,6 +161,7 @@ void IRSystem::evaluate(bool print) {
       if (recall >= threshold) {
 	dp = precision - recallOnPrecision[lastRecall];
 	dr = recall - lastRecall;  // should be constant actually
+	// do the linear interpolation
 	niceROP[threshold] = recallOnPrecision[lastRecall] + (threshold - lastRecall) * (dp/dr);
 	if (print) printf("%g --> %g \n", threshold, niceROP[threshold]);
 	threshold += 0.1;
@@ -203,35 +179,20 @@ void IRSystem::evaluate(bool print) {
   printf("average: %g \n", average);
 }
 
-// void IRSystem::printRankedList() {
-//   int num = 0;
-//   int foundDocs = 0;
-//   double numRel = (double) relevantDocs.size();
-//   double precision, recall;
-//   multimap<double, document>::reverse_iterator riter;
-//   
-//   printf("ranked list of candidates (%i): \n", seenDocs.size());
-//   printf("name [score] [Precision] [Recall] \n");
-//   for (riter = ranking.rbegin(); riter != ranking.rend(); riter++) {
-//     num++;
-//     if (relevantDocs.find(riter->second) != relevantDocs.end()) { // contained
-//       foundDocs++;
-//     }
-//     precision = ((double) foundDocs)/((double) num);
-//     recall = ((double) foundDocs)/numRel;
-//     printf("%s \t [%g] \t [%g] \t [%g] \n", riter->second.c_str(), riter->first, precision, recall);
-//   }
-// }
-
-void IRSystem::clearQuery() {
-  query.clear();
+void IRSystem::clearEvaluation() {
   docScore.clear();
   seenDocs.clear();
   ranking.clear();
   recallOnPrecision.clear();
-  printf("\n\n");
 }
 
+void IRSystem::clearQuery() {
+  query.clear();
+  clearEvaluation();
+}
+
+// adds the keyword plus upper/lower case expansions to the internal query.
+// sets remove duplicates autmatically
 void IRSystem::addKeyWord(term word) {
   int i;
   char altWord[word.size()];
@@ -243,54 +204,62 @@ void IRSystem::addKeyWord(term word) {
   }
   altWord[i] = '\0';
 //   printf("Adding as well: \'%s\' \n", altWord);
-//   query.push_back(string(altWord));
+  query.insert(string(altWord));
   for (i = 0; input[i] != '\0'; i++) {
     altWord[i] = toupper(input[i]);
   }
   altWord[i] = '\0';
 //   printf("Adding as well: \'%s\' \n", altWord);
-//   query.push_back(string(altWord));
+  query.insert(string(altWord));
+  for (i = 0; input[i] != '\0'; i++) {
+    altWord[i] = tolower(input[i]);
+  }
+  altWord[i] = '\0';
+//   printf("Adding as well: \'%s\' \n", altWord);
+  query.insert(string(altWord));
   
-  query.push_back(word);
+  query.insert(word);
 }
 
 int main(int argc, const char** argv) {
   int i;
-  list<term> query1;
-  list<term> query2;
+  set<term> query1;
+  set<term> query2;
   IRSystem *irs = new IRSystem();
   
-//   if (argc == 1) {
-//     query1.push_back("financial");
-//     query1.push_back("instruments");
-//     query1.push_back("being");
-//     query1.push_back("traded");
-//     query1.push_back("on");
-//     query1.push_back("the");
-//     query1.push_back("American");
-//     query1.push_back("stock");
-//     query1.push_back("exchange");
-//     
-//     query2.push_back("stocks");
-//     query2.push_back("shares");
-//     query2.push_back("stock");
-//     query2.push_back("market");
-//     query2.push_back("exchange");
-//     query2.push_back("New");
-//     query2.push_back("York");
-//     query2.push_back("traded");
-//     query2.push_back("trading");
-//   } else {
-//     for (i = 1; i < argc; i++) {
-//       query1.push_back(string(argv[i]));
-//     }
-//   }
+  // the user is allowed to give a custom query as argument
+  // evaluation is pointless in that case
+  if (argc == 1) {
+    query1.insert("financial");
+    query1.insert("instruments");
+    query1.insert("being");
+    query1.insert("traded");
+    query1.insert("on");
+    query1.insert("the");
+    query1.insert("American");
+    query1.insert("stock");
+    query1.insert("exchange");
+    
+    query2.insert("stocks");
+    query2.insert("shares");
+    query2.insert("stock");
+    query2.insert("market");
+    query2.insert("exchange");
+    query2.insert("New");
+    query2.insert("York");
+    query2.insert("traded");
+    query2.insert("trading");
+  } else {
+    for (i = 1; i < argc; i++) {
+      query1.insert(string(argv[i]));
+    }
+  }
   
   irs->readIndex("data/index.txt");
   irs->readDocLengths("data/doc_lengths.txt");
   irs->readRelevantDocuments("data/relevant.txt");
-//   irs->checkIndex();
-  printf("Query 1: ");
+
+//   printf("Query 1: ");
   irs->addKeyWord("financial");
   irs->addKeyWord("instruments");
   irs->addKeyWord("being");
@@ -300,11 +269,29 @@ int main(int argc, const char** argv) {
   irs->addKeyWord("American");
   irs->addKeyWord("stock");
   irs->addKeyWord("exchange");
+  printf("Query 1 with normalisation and with query expansion: \n");
+  irs->answerQuery(true);
+  irs->evaluate(true);
+  irs->clearEvaluation();
+  printf("\n");
+  printf("Query 1 without normalisation and with query expansion: \n");
   irs->answerQuery(false);
   irs->evaluate(true);
   irs->clearQuery();
+  printf("\n");
   
-  printf("Query 2: ");
+  printf("Query 1 with normalisation and without query expansion: \n");
+  irs->answerQuery(query1, true);
+  irs->evaluate(true);
+  irs->clearEvaluation();
+  printf("\n");
+  printf("Query 1 without normalisation and without query expansion: \n");
+  irs->answerQuery(query1, false);
+  irs->evaluate(true);
+  irs->clearQuery();
+  printf("\n");
+  
+//   printf("Query 2: ");
   irs->addKeyWord("stocks");
   irs->addKeyWord("shares");
   irs->addKeyWord("stock");
@@ -314,8 +301,27 @@ int main(int argc, const char** argv) {
   irs->addKeyWord("York");
   irs->addKeyWord("traded");
   irs->addKeyWord("trading");
+  printf("Query 2 with normalisation and with query expansion: \n");
+  irs->answerQuery(true);
+  irs->evaluate(true);
+  irs->clearEvaluation();
+  printf("\n");
+  printf("Query 2 without normalisation and with query expansion: \n");
   irs->answerQuery(false);
   irs->evaluate(true);
+  irs->clearQuery();
+  printf("\n");
+  printf("Query 2 with normalisation and without query expansion: \n");
+  irs->answerQuery(query2, true);
+  irs->evaluate(true);
+  irs->clearEvaluation();
+  printf("\n");
+  printf("Query 2 without normalisation and without query expansion: \n");
+  irs->answerQuery(query2, false);
+  irs->evaluate(true);
+  irs->clearEvaluation();
+  printf("\n");
+  
 
   return 0;
 }

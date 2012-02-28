@@ -30,25 +30,22 @@ typedef struct docTF {
 
 class IRSystem {
 public:
-  // reads a string that lies between two spaces into the word-buffer. The reading buffer may be re-filled.
-  int  readWord(FILE* file, char* word);
   // fills both dfIndex and tfIndex from input file.
   void readIndex(string path);
   // reads tf*idf document lengths from input file and stores values in docLen.
   void readDocLengths(string path);
   // reads relevant docuemnts into relevantDocs.
   void readRelevantDocuments(string path);
-//   void checkIndex();
-//   void printRankedList();
   // the IRSystem class can store a query internally, the user can still provide a specific query.
   // The internal query allows to apply some query expansion techniques.
-  void answerQuery(list<term> query, bool normalise);
+  void answerQuery(set<term> query, bool normalise);
   void answerQuery(bool normalise);
   void evaluate(bool print);
   // Adds a term to the internal query.
   void addKeyWord(term word);
   // clears the internal query.
   void clearQuery();
+  void clearEvaluation();
 protected:
   // current position in reading buffer. Reading happens character-wise.
   int pos;
@@ -57,7 +54,7 @@ protected:
   // input buffer.
   char buffer[BUFFER_SIZE];
   // list of terms in the query.
-  list<term>                             query;
+  set<term>                              query;
   unordered_map< term, int >             dfIndex;
   unordered_map< term, vector< docTF > > tfIndex;
   unordered_map< document, double >      docLen;
@@ -69,7 +66,9 @@ protected:
   map < double, double >                 recallOnPrecision;
   map < double, double >                 niceROP;
   
-  // increases position pointer in input buffer, may refill the buffer if end is reached.
+  // reads a string that lies between two spaces into the word-buffer. The reading buffer may be re-filled.
+  int  readWord(FILE* file, char* word);
+  // increases position pointer in input buffer, may refill the buffer and sets pos to 0 if end is reached.
   void increasePos(FILE* file);
 };
 
