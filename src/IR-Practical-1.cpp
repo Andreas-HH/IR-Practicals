@@ -68,6 +68,7 @@ void IRSystem::readIndex(string path) {
 void IRSystem::readDocLengths(string path) {
   char word[64];
   double len;
+  double average = 0.;
   document currentDoc;
   stringstream stod(stringstream::in | stringstream::out);
   FILE *lenf = fopen(path.c_str(), "r");
@@ -81,22 +82,40 @@ void IRSystem::readDocLengths(string path) {
     stod << word;
     stod >> len;
     stod.clear();
+    average += len;
     docLen[currentDoc] = len;
   }
   fclose(lenf);
+  average /= docLen.size();
+  printf("Average document length: %g \n", average);
 }
 
 void IRSystem::readRelevantDocuments(string path) {
   char word[64];
+  double averagelen = 0.;
+  double averagelenNR = 0.;
+  document doc;
+  unordered_map< document, double >::iterator diter;
   FILE *relf = fopen(path.c_str(), "r");
   
   pos = 0;  // no blank symbol in this file
   read = fread(buffer, sizeof(char), BUFFER_SIZE, relf);
   while (pos != read) {
     readWord(relf, word);
-    relevantDocs.insert(string(word));
+    doc = string(word);
+    relevantDocs.insert(doc);
+    averagelen += docLen[doc];
   }
+  averagelen /= relevantDocs.size();
+  for (diter = docLen.begin(); diter != docLen.end(); diter++) {
+    if (relevantDocs.find(diter->first) == relevantDocs.end()) {
+      averagelenNR += diter->second;
+    }
+  }
+  averagelenNR /= docLen.size() - relevantDocs.size();
   fclose(relf);
+  printf("Average length of relevant documents: %g \n", averagelen);
+  printf("Average length of non-relevant documents: %g \n", averagelenNR);
 }
 
 void IRSystem::answerQuery(bool normalise) {
@@ -131,6 +150,7 @@ void IRSystem::answerQuery(set<term> query, bool normalise) {
     }
   }
   
+  // insert final scores in the ranking multimap
   for (siter = seenDocs.begin(); siter != seenDocs.end(); siter++) {
     currentDoc = *siter;
     ranking.insert(pair<double,document>(docScore[currentDoc], currentDoc));
@@ -151,13 +171,17 @@ void IRSystem::evaluate(bool print) {
   map< double, double >::iterator rpiter; // iterator through nice recall->precision table
   
   if (print) printf("Recall --> Precision \n");
+  // scan in order of ranking and change recall/precision accordingly
   for (riter = ranking.rbegin(); riter != ranking.rend(); riter++) {
+    printf("doc: %s", riter->second.c_str());
     num++;
     if (relevantDocs.find(riter->second) != relevantDocs.end()) { // contained
+      printf(" [relevant] ");
       foundDocs++;
       precision = ((double) foundDocs)/((double) num);
       recall = ((double) foundDocs)/numRel;
       recallOnPrecision[recall] = precision;
+      // add a a point to the nice recall->precision table if threshold is reached
       if (recall >= threshold) {
 	dp = precision - recallOnPrecision[lastRecall];
 	dr = recall - lastRecall;  // should be constant actually
@@ -168,6 +192,7 @@ void IRSystem::evaluate(bool print) {
       }
       lastRecall = recall;
     }
+    printf("\n");
   }
   
   // compute average
