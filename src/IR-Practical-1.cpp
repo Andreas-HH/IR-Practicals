@@ -102,8 +102,10 @@ void IRSystem::readFeedback(string path) {
     doc = string(word);
     readWord(fed, word);
     if (word[0] == '0') {
+//       printf("inserting negative feedback: %s \n", doc.c_str());
       negFeedback.insert(doc);
     } else {
+//       printf("inserting positive feedback: %s \n", doc.c_str());
       posFeedback.insert(doc);
     }
   }
@@ -157,11 +159,11 @@ void IRSystem::setNormalise(bool n) {
 }
 
 
-void IRSystem::answerQuery() {
-  answerQuery(query);
+void IRSystem::answerQuery(double scale, bool rank) {
+  answerQuery(query, scale, rank);
 }
 
-void IRSystem::answerQuery(set<term> query) {
+void IRSystem::answerQuery(set<term> query, double scale, bool rank) {
   int df;
   double currentLen;
   double currentIDF;
@@ -179,15 +181,17 @@ void IRSystem::answerQuery(set<term> query) {
 	currentDoc = *(viter->doc);
         seenDocs.insert(currentDoc);
 	if (normalise)
-	  docScore[currentDoc] += ((double)viter->tf)*currentIDF/docLen[currentDoc];
+	  docScore[currentDoc] += scale*((double)viter->tf)*currentIDF/docLen[currentDoc];
 	else
-	  docScore[currentDoc] += ((double)viter->tf)*currentIDF;
+	  docScore[currentDoc] += scale*((double)viter->tf)*currentIDF;
+	if (docScore[currentDoc] < 0.) docScore[currentDoc] = 0.;
       }
     } /*else {
       currentIDF = 0.;   // ignore terms that aren't indexed
     }*/
   }
-  fillRanking();
+  if (rank)
+    fillRanking();
 }
 
 void IRSystem::fillRanking() {
@@ -198,8 +202,11 @@ void IRSystem::fillRanking() {
     // insert final scores in the ranking multimap
   for (siter = seenDocs.begin(); siter != seenDocs.end(); siter++) {
     currentDoc = *siter;
-    ranking.insert(pair<double,document>(docScore[currentDoc], currentDoc));
+    if (docScore[currentDoc] > 0.)
+      ranking.insert(pair<double,document>(docScore[currentDoc], currentDoc));
+//     printf("docScore[%s] = %g \n", currentDoc.c_str(), docScore[currentDoc]);
   }
+  printf("size of ranking: %i \n", ranking.size());
 }
 
 void IRSystem::applyFeedback(double alpha, double beta, double gamma) {
@@ -208,6 +215,8 @@ void IRSystem::applyFeedback(double alpha, double beta, double gamma) {
   unordered_map< document, double >::iterator siter;
   unordered_map< term, vector< docTF > >::iterator titer;
   vector< docTF >::iterator citer;
+  set< term > posTerms;
+  set< term > negTerms;
 
   // processing original query
   for (siter = docScore.begin(); siter != docScore.end(); siter++) {
@@ -217,46 +226,39 @@ void IRSystem::applyFeedback(double alpha, double beta, double gamma) {
   // processing positive feedback
   for (titer = tfIndex.begin(); titer != tfIndex.end(); titer++) {
     for(citer = titer->second.begin(); citer != titer->second.end(); citer++) {
-      currentDoc = *citer->doc;
+      currentDoc = *(citer->doc);
       if (posFeedback.find(currentDoc) != posFeedback.end()) { // document is used for pos feedback
-        seenDocs.insert(currentDoc);
-        currentIDF = 1./((double) dfIndex[titer->first]);
-	if (normalise)
-          docScore[currentDoc] += beta*((double)citer->tf)*currentIDF/docLen[currentDoc];
-        else
-	  docScore[currentDoc] += beta*((double)citer->tf)*currentIDF;
+        posTerms.insert(titer->first);
       }
     }
   }
-  
+  answerQuery(posTerms, beta, false);
+  posTerms.clear();
+
   // processing negative feedback
   for (titer = tfIndex.begin(); titer != tfIndex.end(); titer++) {
     for(citer = titer->second.begin(); citer != titer->second.end(); citer++) {
-      currentDoc = *citer->doc;
+      currentDoc = *(citer->doc);
       if (negFeedback.find(currentDoc) != negFeedback.end()) { // document is used for pos feedback
-        seenDocs.insert(currentDoc);
-        currentIDF = 1./((double) dfIndex[titer->first]);
-	if (normalise)
-          docScore[currentDoc] -= gamma*((double)citer->tf)*currentIDF/docLen[currentDoc];
-	else 
-	  docScore[currentDoc] -= gamma*((double)citer->tf)*currentIDF;
-	if (docScore[currentDoc] < 0) docScore[currentDoc] = 0.;
+        negTerms.insert(titer->first);
       }
     }
   }
+  answerQuery(negTerms, -1. * gamma, false);
+  negTerms.clear();
   fillRanking();
 }
 
 void IRSystem::evaluate(bool print) {
-  evaluateInternal(print, relevantDocs);
+  evaluateInternal(print, relevantDocs, false);
 }
 
 void IRSystem::evaluateFeedback(bool print) {
-  evaluateInternal(print, relevantDocsNoFeedback);
+  evaluateInternal(print, relevantDocsNoFeedback, true);
 }
 
 
-void IRSystem::evaluateInternal(bool print, set< document > &set) {
+void IRSystem::evaluateInternal(bool print, set< document > &set, bool ignorePosFeedback) {
   int num = 0; // number of seen documents
   int foundDocs = 0; // number of seen relevant documents
   double threshold = 0.1; // interval with to output recall->precision value
@@ -274,7 +276,11 @@ void IRSystem::evaluateInternal(bool print, set< document > &set) {
   if (print) printf("Recall --> Precision \n");
   // scan in order of ranking and change recall/precision accordingly
   for (riter = ranking.rbegin(); riter != ranking.rend(); riter++) {
-//     printf("doc: %s", riter->second.c_str());
+//     if (ignorePosFeedback) printf("doc: %s \n", riter->second.c_str());
+    if (ignorePosFeedback && posFeedback.find(riter->second) != posFeedback.end()) {
+//       printf("ignoring some document: %s \n", riter->second.c_str());
+      continue;
+    }
     num++;
     if (set.find(riter->second) != set.end()) { // contained
 //       printf(" [relevant] ");
@@ -308,7 +314,7 @@ void IRSystem::evaluateInternal(bool print, set< document > &set) {
 void IRSystem::clearEvaluation() {
   docScore.clear();
   seenDocs.clear();
-  ranking.clear();
+//   ranking.clear();
 //   recallOnPrecision.clear();
 }
 
@@ -352,7 +358,7 @@ int main(int argc, const char** argv) {
   set<term> query1;
   set<term> query2;
   IRSystem *irs = new IRSystem();
-  double alpha = 1., beta = 1., gamma = 0.2;
+  double alpha = 1., beta = .5, gamma = .5;
   
   // the user is allowed to give a custom query as argument
   // evaluation is pointless in that case
@@ -407,7 +413,7 @@ int main(int argc, const char** argv) {
   irs->evaluate(true);
   printf("\nAnd with feedback: \n\n");
   irs->applyFeedback(alpha, beta, gamma);
-  irs->evaluate(true);
+  irs->evaluateFeedback(true);
   irs->clearEvaluation();
   printf("\n");
   printf("Query 1 without normalisation and with query expansion: \n");

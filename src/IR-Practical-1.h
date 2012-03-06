@@ -44,8 +44,8 @@ public:
   void readFeedback(string path);
   // the IRSystem class can store a query internally, the user can still provide a specific query.
   // The internal query allows to apply some query expansion techniques.
-  void answerQuery(set<term> query);
-  void answerQuery();
+  void answerQuery(set<term> query, double scale = 1., bool rank = true);
+  void answerQuery(double scale = 1., bool rank = true);
   // this should be called after answerQuery() to add the use of feedback. Otherwise it will
   // ignore the original query.
   void applyFeedback(double alpha, double beta, double gamma);
@@ -91,7 +91,7 @@ protected:
   // creates ranking from seenDocs and docScore.
   void fillRanking();
   // allows to switch easyily between relevantDocs and relevantDocsNoFeedback.
-  void evaluateInternal(bool print, set< document > &set);
+  void evaluateInternal(bool print, set< document > &set, bool ignorePosFeedback);
 };
 
 #endif /* IR_PRAC_1 */
