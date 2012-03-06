@@ -90,10 +90,40 @@ void IRSystem::readDocLengths(string path) {
   printf("Average document length: %g \n", average);
 }
 
+void IRSystem::readFeedback(string path) {
+  char word[64];
+  document doc;
+  FILE *fed = fopen(path.c_str(), "r");
+  
+  pos = 0;  // no blank symbol in this file
+  read = fread(buffer, sizeof(char), BUFFER_SIZE, fed);
+  while (pos != read) {
+    readWord(fed, word);
+    doc = string(word);
+    readWord(fed, word);
+    if (word[0] == '0') {
+      negFeedback.insert(doc);
+    } else {
+      posFeedback.insert(doc);
+    }
+  }
+}
+
+
 void IRSystem::readRelevantDocuments(string path) {
+  readSetOfDocuments(path, relevantDocs);
+}
+
+void IRSystem::readRelevantDocumentsNoFeedback(string path) {
+  readSetOfDocuments(path, relevantDocsNoFeedback);
+}
+
+void IRSystem::readSetOfDocuments(string path, set< document > &set) {
   char word[64];
   double averagelen = 0.;
   double averagelenNR = 0.;
+  double minNorm = INFINITY;
+  int count = 0;
   document doc;
   unordered_map< document, double >::iterator diter;
   FILE *relf = fopen(path.c_str(), "r");
@@ -103,26 +133,35 @@ void IRSystem::readRelevantDocuments(string path) {
   while (pos != read) {
     readWord(relf, word);
     doc = string(word);
-    relevantDocs.insert(doc);
+    set.insert(doc);
     averagelen += docLen[doc];
   }
-  averagelen /= relevantDocs.size();
+  averagelen /= set.size();
   for (diter = docLen.begin(); diter != docLen.end(); diter++) {
-    if (relevantDocs.find(diter->first) == relevantDocs.end()) {
+    if (set.find(diter->first) == set.end()) {
       averagelenNR += diter->second;
+      if (diter->second < averagelen) count++;
+      if (diter->second < minNorm) minNorm = diter->second;
     }
   }
-  averagelenNR /= docLen.size() - relevantDocs.size();
+  averagelenNR /= docLen.size() - set.size();
   fclose(relf);
   printf("Average length of relevant documents: %g \n", averagelen);
   printf("Average length of non-relevant documents: %g \n", averagelenNR);
+  printf("%i non-relevant documents are smaller than average relevant document. \n", count);
+  printf("Smallest norm seen: %g \n", minNorm);
 }
 
-void IRSystem::answerQuery(bool normalise) {
-  answerQuery(query, normalise);
+void IRSystem::setNormalise(bool n) {
+  normalise = n;
 }
 
-void IRSystem::answerQuery(set<term> query, bool normalise) {
+
+void IRSystem::answerQuery() {
+  answerQuery(query);
+}
+
+void IRSystem::answerQuery(set<term> query) {
   int df;
   double currentLen;
   double currentIDF;
@@ -130,7 +169,6 @@ void IRSystem::answerQuery(set<term> query, bool normalise) {
   vector<docTF> vDTF;
   set<term>::iterator qiter;
   vector<docTF>::iterator viter;
-  set<document>::iterator siter;
   
   for (qiter = query.begin(); qiter != query.end(); qiter++) {
     df = dfIndex[*qiter];
@@ -145,38 +183,101 @@ void IRSystem::answerQuery(set<term> query, bool normalise) {
 	else
 	  docScore[currentDoc] += ((double)viter->tf)*currentIDF;
       }
-    } else {
+    } /*else {
       currentIDF = 0.;   // ignore terms that aren't indexed
-    }
+    }*/
   }
+  fillRanking();
+}
+
+void IRSystem::fillRanking() {
+  set<document>::iterator siter;
+  document currentDoc;
   
-  // insert final scores in the ranking multimap
+  ranking.clear();
+    // insert final scores in the ranking multimap
   for (siter = seenDocs.begin(); siter != seenDocs.end(); siter++) {
     currentDoc = *siter;
     ranking.insert(pair<double,document>(docScore[currentDoc], currentDoc));
   }
 }
 
+void IRSystem::applyFeedback(double alpha, double beta, double gamma) {
+  double currentIDF;
+  document currentDoc;
+  unordered_map< document, double >::iterator siter;
+  unordered_map< term, vector< docTF > >::iterator titer;
+  vector< docTF >::iterator citer;
+
+  // processing original query
+  for (siter = docScore.begin(); siter != docScore.end(); siter++) {
+    siter->second *= alpha;
+  }
+  
+  // processing positive feedback
+  for (titer = tfIndex.begin(); titer != tfIndex.end(); titer++) {
+    for(citer = titer->second.begin(); citer != titer->second.end(); citer++) {
+      currentDoc = *citer->doc;
+      if (posFeedback.find(currentDoc) != posFeedback.end()) { // document is used for pos feedback
+        seenDocs.insert(currentDoc);
+        currentIDF = 1./((double) dfIndex[titer->first]);
+	if (normalise)
+          docScore[currentDoc] += beta*((double)citer->tf)*currentIDF/docLen[currentDoc];
+        else
+	  docScore[currentDoc] += beta*((double)citer->tf)*currentIDF;
+      }
+    }
+  }
+  
+  // processing negative feedback
+  for (titer = tfIndex.begin(); titer != tfIndex.end(); titer++) {
+    for(citer = titer->second.begin(); citer != titer->second.end(); citer++) {
+      currentDoc = *citer->doc;
+      if (negFeedback.find(currentDoc) != negFeedback.end()) { // document is used for pos feedback
+        seenDocs.insert(currentDoc);
+        currentIDF = 1./((double) dfIndex[titer->first]);
+	if (normalise)
+          docScore[currentDoc] -= gamma*((double)citer->tf)*currentIDF/docLen[currentDoc];
+	else 
+	  docScore[currentDoc] -= gamma*((double)citer->tf)*currentIDF;
+	if (docScore[currentDoc] < 0) docScore[currentDoc] = 0.;
+      }
+    }
+  }
+  fillRanking();
+}
+
 void IRSystem::evaluate(bool print) {
+  evaluateInternal(print, relevantDocs);
+}
+
+void IRSystem::evaluateFeedback(bool print) {
+  evaluateInternal(print, relevantDocsNoFeedback);
+}
+
+
+void IRSystem::evaluateInternal(bool print, set< document > &set) {
   int num = 0; // number of seen documents
   int foundDocs = 0; // number of seen relevant documents
   double threshold = 0.1; // interval with to output recall->precision value
   double lastRecall = 0.; // recall seen in the last iteration, used for interpolation
   double dp, dr; // delta precision, recall
-  double numRel = (double) relevantDocs.size(); // number of relevant documents
+  double numRel = (double) set.size(); // number of relevant documents
   double precision, recall;
   double average = 0;
   double numRecall;
   multimap< double, document >::reverse_iterator riter; // go from high to low score values
   map< double, double >::iterator rpiter; // iterator through nice recall->precision table
   
+  recallOnPrecision.clear();
+  niceROP.clear();
   if (print) printf("Recall --> Precision \n");
   // scan in order of ranking and change recall/precision accordingly
   for (riter = ranking.rbegin(); riter != ranking.rend(); riter++) {
-    printf("doc: %s", riter->second.c_str());
+//     printf("doc: %s", riter->second.c_str());
     num++;
-    if (relevantDocs.find(riter->second) != relevantDocs.end()) { // contained
-      printf(" [relevant] ");
+    if (set.find(riter->second) != set.end()) { // contained
+//       printf(" [relevant] ");
       foundDocs++;
       precision = ((double) foundDocs)/((double) num);
       recall = ((double) foundDocs)/numRel;
@@ -192,7 +293,7 @@ void IRSystem::evaluate(bool print) {
       }
       lastRecall = recall;
     }
-    printf("\n");
+//     printf("\n");
   }
   
   // compute average
@@ -208,7 +309,7 @@ void IRSystem::clearEvaluation() {
   docScore.clear();
   seenDocs.clear();
   ranking.clear();
-  recallOnPrecision.clear();
+//   recallOnPrecision.clear();
 }
 
 void IRSystem::clearQuery() {
@@ -251,6 +352,7 @@ int main(int argc, const char** argv) {
   set<term> query1;
   set<term> query2;
   IRSystem *irs = new IRSystem();
+  double alpha = 1., beta = 1., gamma = 0.2;
   
   // the user is allowed to give a custom query as argument
   // evaluation is pointless in that case
@@ -282,7 +384,11 @@ int main(int argc, const char** argv) {
   
   irs->readIndex("data/index.txt");
   irs->readDocLengths("data/doc_lengths.txt");
+  printf("\nLoading relevant documents: \n");
   irs->readRelevantDocuments("data/relevant.txt");
+  printf("\nLoading non-feedback relevant documents: \n");
+  irs->readRelevantDocumentsNoFeedback("data/relevant_nofback.txt");
+  irs->readFeedback("data/feedback.txt");
 
 //   printf("Query 1: ");
   irs->addKeyWord("financial");
@@ -294,25 +400,42 @@ int main(int argc, const char** argv) {
   irs->addKeyWord("American");
   irs->addKeyWord("stock");
   irs->addKeyWord("exchange");
+  printf("\n");
   printf("Query 1 with normalisation and with query expansion: \n");
-  irs->answerQuery(true);
+  irs->setNormalise(true);
+  irs->answerQuery();
+  irs->evaluate(true);
+  printf("\nAnd with feedback: \n\n");
+  irs->applyFeedback(alpha, beta, gamma);
   irs->evaluate(true);
   irs->clearEvaluation();
   printf("\n");
   printf("Query 1 without normalisation and with query expansion: \n");
-  irs->answerQuery(false);
+  irs->setNormalise(false);
+  irs->answerQuery();
   irs->evaluate(true);
+  printf("\nAnd with feedback: \n\n");
+  irs->applyFeedback(alpha, beta, gamma);
+  irs->evaluateFeedback(true);
   irs->clearQuery();
   printf("\n");
   
   printf("Query 1 with normalisation and without query expansion: \n");
-  irs->answerQuery(query1, true);
+  irs->setNormalise(true);
+  irs->answerQuery(query1);
   irs->evaluate(true);
+  printf("\nAnd with feedback: \n\n");
+  irs->applyFeedback(alpha, beta, gamma);
+  irs->evaluateFeedback(true);
   irs->clearEvaluation();
   printf("\n");
   printf("Query 1 without normalisation and without query expansion: \n");
-  irs->answerQuery(query1, false);
+  irs->setNormalise(false);
+  irs->answerQuery(query1);
   irs->evaluate(true);
+  printf("\nAnd with feedback: \n\n");
+  irs->applyFeedback(alpha, beta, gamma);
+  irs->evaluateFeedback(true);
   irs->clearQuery();
   printf("\n");
   
@@ -327,26 +450,41 @@ int main(int argc, const char** argv) {
   irs->addKeyWord("traded");
   irs->addKeyWord("trading");
   printf("Query 2 with normalisation and with query expansion: \n");
-  irs->answerQuery(true);
+  irs->setNormalise(true);
+  irs->answerQuery();
   irs->evaluate(true);
+  printf("\nAnd with feedback: \n\n");
+  irs->applyFeedback(alpha, beta, gamma);
+  irs->evaluateFeedback(true);
   irs->clearEvaluation();
   printf("\n");
   printf("Query 2 without normalisation and with query expansion: \n");
-  irs->answerQuery(false);
+  irs->setNormalise(false);
+  irs->answerQuery();
   irs->evaluate(true);
+  printf("\nAnd with feedback: \n\n");
+  irs->applyFeedback(alpha, beta, gamma);
+  irs->evaluateFeedback(true);
   irs->clearQuery();
   printf("\n");
   printf("Query 2 with normalisation and without query expansion: \n");
-  irs->answerQuery(query2, true);
+  irs->setNormalise(true);
+  irs->answerQuery(query2);
   irs->evaluate(true);
+  printf("\nAnd with feedback: \n\n");
+  irs->applyFeedback(alpha, beta, gamma);
+  irs->evaluateFeedback(true);
   irs->clearEvaluation();
   printf("\n");
   printf("Query 2 without normalisation and without query expansion: \n");
-  irs->answerQuery(query2, false);
+  irs->setNormalise(false);
+  irs->answerQuery(query2);
   irs->evaluate(true);
+  printf("\nAnd with feedback: \n\n");
+  irs->applyFeedback(alpha, beta, gamma);
+  irs->evaluateFeedback(true);
   irs->clearEvaluation();
   printf("\n");
-  
 
   return 0;
 }
