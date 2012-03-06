@@ -1,0 +1,260 @@
+Average document length: 1.67164 
+
+Loading relevant documents: 
+Average length of relevant documents: 1.28457 
+Average length of non-relevant documents: 1.67641 
+1704 non-relevant documents are smaller than average relevant document. 
+Smallest norm seen: 0.0200403 
+
+Loading non-feedback relevant documents: 
+Average length of relevant documents: 1.02167 
+Average length of non-relevant documents: 1.67838 
+1494 non-relevant documents are smaller than average relevant document. 
+Smallest norm seen: 0.0200403 
+
+Query 1 with normalisation and with query expansion: 
+size of ranking: 1150 
+Recall --> Precision 
+0.1 --> 0.0608519 
+0.2 --> 0.0965611 
+0.3 --> 0.124315 
+0.4 --> 0.124854 
+0.5 --> 0.113475 
+0.6 --> 0.121245 
+0.7 --> 0.12859 
+0.8 --> 0.119966 
+0.9 --> 0.103147 
+1 --> 0.0556522 
+average: 0.104866 
+
+And with feedback: 
+
+size of ranking: 1291 
+Recall --> Precision 
+0.1 --> 1 
+0.2 --> 1 
+0.3 --> 0.89 
+0.4 --> 0.915152 
+0.5 --> 0.930952 
+0.6 --> 0.931889 
+0.7 --> 0.904286 
+0.8 --> 0.915217 
+0.9 --> 0.896154 
+1 --> 0.84375 
+average: 0.92274 
+
+Query 1 without normalisation and with query expansion: 
+size of ranking: 1150 
+Recall --> Precision 
+0.1 --> 0.514286 
+0.2 --> 0.216071 
+0.3 --> 0.20592 
+0.4 --> 0.164567 
+0.5 --> 0.142857 
+0.6 --> 0.157143 
+0.7 --> 0.102386 
+0.8 --> 0.0780439 
+0.9 --> 0.0855094 
+1 --> 0.0883978 
+average: 0.175518 
+
+And with feedback: 
+
+size of ranking: 1291 
+Recall --> Precision 
+0.1 --> 1 
+0.2 --> 1 
+0.3 --> 1 
+0.4 --> 1 
+0.5 --> 0.845098 
+0.6 --> 0.715774 
+0.7 --> 0.491403 
+0.8 --> 0.373729 
+0.9 --> 0.376761 
+1 --> 0.186207 
+average: 0.698897 
+
+Query 1 with normalisation and without query expansion: 
+size of ranking: 904 
+Recall --> Precision 
+0.1 --> 0.113131 
+0.2 --> 0.141714 
+0.3 --> 0.130654 
+0.4 --> 0.14954 
+0.5 --> 0.140351 
+0.6 --> 0.155471 
+0.7 --> 0.117392 
+0.8 --> 0.0935155 
+0.9 --> 0.0688161 
+average: 0.123398 
+
+And with feedback: 
+
+size of ranking: 1270 
+Recall --> Precision 
+0.1 --> 1 
+0.2 --> 0.942857 
+0.3 --> 0.89 
+0.4 --> 0.915152 
+0.5 --> 0.930952 
+0.6 --> 0.890058 
+0.7 --> 0.904286 
+0.8 --> 0.915217 
+0.9 --> 0.872222 
+1 --> 0.818182 
+average: 0.907893 
+
+Query 1 without normalisation and without query expansion: 
+size of ranking: 904 
+Recall --> Precision 
+0.1 --> 0.312727 
+0.2 --> 0.395556 
+0.3 --> 0.421429 
+0.4 --> 0.340351 
+0.5 --> 0.2 
+0.6 --> 0.168701 
+0.7 --> 0.137139 
+0.8 --> 0.0801675 
+0.9 --> 0.0455116 
+average: 0.233509 
+
+And with feedback: 
+
+size of ranking: 1270 
+Recall --> Precision 
+0.1 --> 1 
+0.2 --> 1 
+0.3 --> 1 
+0.4 --> 1 
+0.5 --> 0.845098 
+0.6 --> 0.74303 
+0.7 --> 0.502941 
+0.8 --> 0.380313 
+0.9 --> 0.38274 
+1 --> 0.171975 
+average: 0.70261 
+
+Query 2 with normalisation and with query expansion: 
+size of ranking: 1404 
+Recall --> Precision 
+0.1 --> 0.213534 
+0.2 --> 0.189813 
+0.3 --> 0.20592 
+0.4 --> 0.234374 
+0.5 --> 0.242424 
+0.6 --> 0.231877 
+0.7 --> 0.239808 
+0.8 --> 0.226932 
+0.9 --> 0.206682 
+1 --> 0.189349 
+average: 0.218071 
+
+And with feedback: 
+
+size of ranking: 1290 
+Recall --> Precision 
+0.1 --> 1 
+0.2 --> 0.942857 
+0.3 --> 0.89 
+0.4 --> 0.915152 
+0.5 --> 0.930952 
+0.6 --> 0.931889 
+0.7 --> 0.862987 
+0.8 --> 0.878 
+0.9 --> 0.880843 
+1 --> 0.771429 
+average: 0.900411 
+
+Query 2 without normalisation and with query expansion: 
+size of ranking: 1404 
+Recall --> Precision 
+0.1 --> 0.76 
+0.2 --> 0.761111 
+0.3 --> 0.705495 
+0.4 --> 0.661176 
+0.5 --> 0.592593 
+0.6 --> 0.527485 
+0.7 --> 0.505952 
+0.8 --> 0.40248 
+0.9 --> 0.375214 
+1 --> 0.301887 
+average: 0.559339 
+
+And with feedback: 
+
+size of ranking: 1290 
+Recall --> Precision 
+0.1 --> 1 
+0.2 --> 1 
+0.3 --> 1 
+0.4 --> 0.933333 
+0.5 --> 0.870833 
+0.6 --> 0.722857 
+0.7 --> 0.515103 
+0.8 --> 0.39127 
+0.9 --> 0.39504 
+1 --> 0.210938 
+average: 0.703937 
+
+Query 2 with normalisation and without query expansion: 
+size of ranking: 1098 
+Recall --> Precision 
+0.1 --> 0.301538 
+0.2 --> 0.359133 
+0.3 --> 0.380769 
+0.4 --> 0.402419 
+0.5 --> 0.372093 
+0.6 --> 0.318907 
+0.7 --> 0.339583 
+0.8 --> 0.302577 
+0.9 --> 0.31383 
+1 --> 0.22695 
+average: 0.33178 
+
+And with feedback: 
+
+size of ranking: 1278 
+Recall --> Precision 
+0.1 --> 1 
+0.2 --> 1 
+0.3 --> 0.89 
+0.4 --> 0.915152 
+0.5 --> 0.930952 
+0.6 --> 0.890058 
+0.7 --> 0.904286 
+0.8 --> 0.915217 
+0.9 --> 0.896154 
+1 --> 0.818182 
+average: 0.916 
+
+Query 2 without normalisation and without query expansion: 
+size of ranking: 1098 
+Recall --> Precision 
+0.1 --> 1 
+0.2 --> 0.864286 
+0.3 --> 0.905455 
+0.4 --> 0.927473 
+0.5 --> 0.8 
+0.6 --> 0.574892 
+0.7 --> 0.493333 
+0.8 --> 0.422404 
+0.9 --> 0.384936 
+1 --> 0.225352 
+average: 0.659813 
+
+And with feedback: 
+
+size of ranking: 1278 
+Recall --> Precision 
+0.1 --> 1 
+0.2 --> 1 
+0.3 --> 1 
+0.4 --> 1 
+0.5 --> 0.870833 
+0.6 --> 0.74625 
+0.7 --> 0.527941 
+0.8 --> 0.380313 
+0.9 --> 0.387143 
+1 --> 0.194245 
+average: 0.710673 
+

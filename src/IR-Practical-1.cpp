@@ -358,7 +358,7 @@ int main(int argc, const char** argv) {
   set<term> query1;
   set<term> query2;
   IRSystem *irs = new IRSystem();
-  double alpha = 1., beta = .5, gamma = .5;
+  double alpha = 1., beta = 1., gamma = 1.;
   
   // the user is allowed to give a custom query as argument
   // evaluation is pointless in that case
